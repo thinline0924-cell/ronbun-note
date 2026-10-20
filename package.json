@@ -1,0 +1,22 @@
+{
+  "name": "ronbun-note",
+  "version": "1.0.0",
+  "description": "研究の記録から日本語の論文が育っていく、大学生・大学院生向けのアプリ(Gemini API)",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/genai": "^2.30.0",
+    "docx": "^9.13.0",
+    "express": "^5.3.0",
+    "jszip": "^3.10.2",
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^6.4.299"
+  }
+}

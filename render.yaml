@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ronbun-note
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      # 作成時に Render の画面で入力します(ここには書きません)
+      - key: GEMINI_API_KEY
+        sync: false
+      # 既定値(あとから Render の画面で変更できます)
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
