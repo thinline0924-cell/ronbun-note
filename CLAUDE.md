@@ -14,6 +14,7 @@
 1. **APIキーをコードやファイルに書かない。** キーは環境変数 `GEMINI_API_KEY` から server.js だけが読む。`public/` 以下には書かない・送らない
 2. AI は **Google Gemini API だけ**(`@google/genai` の Interactions API `client.interactions.create`)。
    書き方が分からない所は推測せず、公式ドキュメントか `@google/genai` の型定義で確かめる
+   - モデルは持ち主の希望で **Gemini 4**(`gemini-4-argon`。「4.0」という名前のモデルは無い)。環境変数 `GEMINI_MODEL` で変えられる
 3. **研究データはブラウザの中(IndexedDB)だけに保存する**(持ち主の決定)。サーバーには保存しない。Gemini には `store: false` で送る
 4. **合言葉は付けない**(持ち主の決定)。代わりに IP ごとの回数制限を外さない・ゆるめない
    (要約 10分20件、反映 10分40回、Word 書き出し 10分30回、`app.set('trust proxy', 1)`)

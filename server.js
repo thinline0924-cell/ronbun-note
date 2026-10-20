@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // ---- 設定(環境変数から読む。Render の画面で入力します) ----
 const PORT = Number(process.env.PORT) || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-4-argon';
 
 const MAX_MATERIAL_CHARS = 60000; // 要約に送る資料の文字数の上限
 const MAX_SECTION_CHARS = 20000; // 1つの章の文字数の上限

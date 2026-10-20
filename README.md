@@ -40,7 +40,7 @@
 | 名前 | 内容 |
 |---|---|
 | `GEMINI_API_KEY` | Gemini の APIキー(必須) |
-| `GEMINI_MODEL` | 使うモデル。既定は `gemini-3.8-flash` |
+| `GEMINI_MODEL` | 使うモデル。既定は `gemini-4-argon` |
 
 ## 困ったとき
 

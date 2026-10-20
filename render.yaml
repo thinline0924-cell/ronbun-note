@@ -12,4 +12,4 @@ services:
         sync: false
       # 既定値(あとから Render の画面で変更できます)
       - key: GEMINI_MODEL
-        value: gemini-3.8-flash
+        value: gemini-4-argon
