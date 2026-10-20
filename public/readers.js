@@ -1,7 +1,7 @@
 // 研究資料(PDF・Word・PowerPoint・テキスト)から文字を取り出す
 // 読み取りはすべてブラウザの中で行います。
 
-const KINDS = [
+const FILE_KINDS = [
   { kind: 'PDF', exts: ['pdf'] },
   { kind: 'Word', exts: ['docx'] },
   { kind: 'PPT', exts: ['pptx'] },
@@ -18,7 +18,7 @@ function extOf(name) {
 // 読める種類なら 'PDF' などを、読めなければ null を返す
 export function fileKind(name) {
   const ext = extOf(name);
-  return KINDS.find((k) => k.exts.includes(ext))?.kind || null;
+  return FILE_KINDS.find((k) => k.exts.includes(ext))?.kind || null;
 }
 
 // 読めない種類のときの説明
@@ -29,11 +29,20 @@ export function unsupportedReason(name) {
   return '読める形式は PDF・Word(.docx)・PowerPoint(.pptx)・テキスト(.txt .md .csv)です。';
 }
 
+// 読み取り用ライブラリの置き場所。ふだんはこのサーバーの /vendor/、
+// 体験版(リンクだけで開くページ)では window.RONBUN_VENDOR で CDN を指定する
+const VENDOR = {
+  pdfjs: '/vendor/pdfjs/',
+  mammoth: '/vendor/mammoth.js',
+  jszip: '/vendor/jszip.js',
+  ...(window.RONBUN_VENDOR || {}),
+};
+
 let pdfjsPromise = null;
 function loadPdfjs() {
   if (!pdfjsPromise) {
-    pdfjsPromise = import('/vendor/pdfjs/pdf.min.mjs').then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+    pdfjsPromise = import(`${VENDOR.pdfjs}pdf.min.mjs`).then((pdfjs) => {
+      pdfjs.GlobalWorkerOptions.workerSrc = `${VENDOR.pdfjs}pdf.worker.min.mjs`;
       return pdfjs;
     });
   }
@@ -59,9 +68,9 @@ async function readPdf(file) {
   const task = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     // 日本語の PDF を読むための文字の対応表
-    cMapUrl: '/vendor/pdfjs/cmaps/',
+    cMapUrl: `${VENDOR.pdfjs}cmaps/`,
     cMapPacked: true,
-    standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+    standardFontDataUrl: `${VENDOR.pdfjs}standard_fonts/`,
     isEvalSupported: false,
   });
   const doc = await task.promise;
@@ -82,13 +91,13 @@ async function readPdf(file) {
 }
 
 async function readDocx(file) {
-  await loadScript('/vendor/mammoth.js');
+  await loadScript(VENDOR.mammoth);
   const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
   return result.value;
 }
 
 async function readPptx(file) {
-  await loadScript('/vendor/jszip.js');
+  await loadScript(VENDOR.jszip);
   const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
   const slides = Object.keys(zip.files)
     .map((name) => ({ name, n: Number(name.match(/^ppt\/slides\/slide(\d+)\.xml$/)?.[1]) }))

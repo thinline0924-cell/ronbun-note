@@ -5,6 +5,10 @@
 import { loadState, saveState } from './store.js';
 import { ACCEPT, extractText, fileKind, unsupportedReason } from './readers.js';
 
+// 体験版(Render を使わず、リンクだけで開くページ)のときは true。
+// 体験版では Gemini・Word 書き出し・印刷が使えないので、その部分は案内に置き換える
+const DEMO = Boolean(window.RONBUN_DEMO);
+
 // ---- 決まった値 ----
 const KINDS = {
   卒業論文: 20000,
@@ -273,6 +277,12 @@ async function addFiles(files) {
 }
 
 async function summarize(m) {
+  if (DEMO) {
+    m.status = 'done';
+    save();
+    refresh();
+    return;
+  }
   m.status = 'summarizing';
   m.error = '';
   refresh();
@@ -407,7 +417,7 @@ function viewHome() {
       <form class="quick-log" data-form="quick-log">
         <label for="quick-log">今日の研究メモ</label>
         <div class="row">
-          <input id="quick-log" data-keep="quick-log" maxlength="1500" placeholder="やったこと・わかったことを書く(論文に反映されます)">
+          <input id="quick-log" data-keep="quick-log" maxlength="1500" placeholder="${DEMO ? 'やったこと・わかったことを書く' : 'やったこと・わかったことを書く(論文に反映されます)'}">
           <button class="btn btn-accent">記録</button>
         </div>
       </form>
@@ -420,12 +430,14 @@ function materialStatus(m) {
   if (m.status === 'reading') return '読み取り中…';
   if (m.status === 'summarizing') return '要約中…';
   if (m.status === 'error') return '読み取れませんでした';
+  if (!m.summary) return '読み取り済み';
   if (m.reflect === 'waiting') return '反映待ち';
   if (m.reflect === 'writing') return '論文に反映中…';
   return '要約済み';
 }
 
 function reflectLine(item) {
+  if (item.reflect === 'demo') return '<div class="reflect muted">体験版のため、論文への自動反映はありません</div>';
   if (item.reflect === 'waiting') return '<div class="reflect">論文への反映を待っています</div>';
   if (item.reflect === 'writing') return '<div class="reflect">論文に反映しています…</div>';
   if (item.reflect === 'error') {
@@ -446,10 +458,12 @@ function viewMaterials() {
     const detail = open && m.status === 'done' ? `
       <div class="m-detail">
         ${m.citation ? `<div class="small muted">書誌情報:${esc(m.citation)}</div>` : ''}
-        <h3>要約</h3>
-        ${paragraphs(m.summary).map((t) => `<p>${esc(t)}</p>`).join('')}
+        ${m.summary ? `<h3>要約</h3>
+        ${paragraphs(m.summary).map((t) => `<p>${esc(t)}</p>`).join('')}` : `<h3>読み取った本文(はじめの部分)</h3>
+        <p class="excerpt">${esc(m.text.slice(0, 1200))}${m.text.length > 1200 ? '…' : ''}</p>
+        <p class="small muted">体験版のため要約は作られません。Render で公開した版では、ここに要約が出ます。</p>`}
         ${m.points?.length ? `<h3>使えそうな要点</h3><ul>${m.points.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-        ${m.text.length > MAX_SEND_CHARS ? `<p class="small muted">※ 長い資料のため、はじめの${MAX_SEND_CHARS.toLocaleString()}字をもとに要約しています。</p>` : ''}
+        ${m.summary && m.text.length > MAX_SEND_CHARS ? `<p class="small muted">※ 長い資料のため、はじめの${MAX_SEND_CHARS.toLocaleString()}字をもとに要約しています。</p>` : ''}
       </div>` : '';
     return `
     <li class="card m-item">
@@ -561,6 +575,11 @@ function paperBody({ forPrint } = {}) {
 }
 
 function viewPaper() {
+  if (DEMO) {
+    return `
+  <p class="small muted">体験版では、論文の自動執筆と Word・PDF の書き出しは使えません。「自分で直す」で本文を書いて、完成度や章立ての動きを試せます。</p>
+  <article class="paper">${paperBody()}</article>`;
+  }
   return `
   <div class="paper-bar">
     <button class="btn btn-accent" data-action="export-docx">Word で書き出す</button>
@@ -612,6 +631,7 @@ function viewSettings() {
     <section class="card welcome">
       <h2>はじめに</h2>
       <p>まず、あなたの研究について入力してください。ここに書いた「研究の問い」をもとに論文が書き進みます。あとからいつでも変えられます。</p>
+      ${DEMO ? '<div class="row wrap welcome-actions"><button class="btn btn-yellow" data-action="load-sample">見本のデータで試す</button><span class="small muted">架空の研究の資料・ログ・締切・論文が入ります</span></div>' : ''}
     </section>`;
   const secs = state.sections.map((s, i) => `
     <li class="row sec-edit">
@@ -652,7 +672,7 @@ function viewSettings() {
     <h2>バックアップ</h2>
     <p class="small muted">データはこのブラウザの中だけにあります。ブラウザの履歴を消すと消えることがあるので、ときどきバックアップを保存してください。別のパソコンへ移すときも使えます。</p>
     <div class="row wrap">
-      <button class="btn btn-plain" data-action="backup">バックアップを保存</button>
+      ${DEMO ? '' : '<button class="btn btn-plain" data-action="backup">バックアップを保存</button>'}
       <button class="btn btn-plain" data-action="restore">バックアップから戻す</button>
       <button class="btn btn-danger-plain" data-action="reset">すべてのデータを消す</button>
     </div>
@@ -702,6 +722,12 @@ function addLog(text, date = todayStr(), tag = 'その他') {
   const log = { id: uid(), date, tag, text, createdAt: Date.now(), reflect: '', reflectedTo: [] };
   state.logs.push(log);
   save();
+  if (DEMO) {
+    log.reflect = 'demo';
+    refresh();
+    toast('記録しました。');
+    return;
+  }
   enqueueWrite({ kind: 'log', text: `${date} [${tag}] ${text}` }, log);
 }
 
@@ -778,6 +804,12 @@ const actions = {
     download(blob, `論文ノート_バックアップ_${todayStr()}.json`);
   },
   restore: () => $('#backup-input').click(),
+  'load-sample': () => {
+    state = sampleState();
+    save();
+    toast('見本のデータを入れました。どれも架空の内容です。');
+    go('home');
+  },
   reset: async () => {
     if (!(await ask('すべてのデータ(資料・ログ・締切・論文)を消しますか?元に戻せません。'))) return;
     state = newState();
@@ -856,6 +888,49 @@ const forms = {
     else render();
   },
 };
+
+// 体験版の「見本のデータ」(架空の研究)
+function sampleState() {
+  const s = newState();
+  const day = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  Object.assign(s.project, {
+    setupDone: true,
+    title: '【見本】オンライン授業におけるカメラの有無と発言のしやすさ',
+    field: '教育心理学',
+    author: '見本 太郎',
+    affiliation: '〇〇大学大学院 教育学研究科',
+    rq: 'オンライン授業で、カメラをオンにするかオフにするかは、学生の発言のしやすさに影響するか。',
+  });
+  const text = {
+    序論: 'オンライン授業は多くの大学で定着しつつあるが、対面授業と比べて学生の発言が少ないという指摘がある。本研究は、カメラのオン・オフという条件に着目し、発言のしやすさとの関係を明らかにすることを目的とする。\n\n【要確認:研究の背景となる統計や先行調査の出典】',
+    先行研究: '見本(2021)は、カメラをオフにした学生ほど授業中の不安が低いと報告している。一方で、教員からの反応が見えにくくなることで発言をためらう可能性も指摘されている(見本資料A)。',
+    研究方法: '学部生を対象に、カメラをオンにする条件とオフにする条件で模擬ゼミを行い、各条件での発言回数と、発言のしやすさの自己評価を比較する。\n\n【要確認:参加者の人数と募集方法】',
+  };
+  for (const sec of s.sections) {
+    if (text[sec.title]) sec.text = text[sec.title];
+  }
+  const now = Date.now();
+  s.logs = [
+    { date: day(-6), tag: '文献', text: '見本(2021)を読んだ。カメラオフで不安が下がるという結果。先行研究に使えそう。' },
+    { date: day(-3), tag: 'ゼミ・相談', text: '先生から、発言回数だけでなく「発言しようとしてやめた回数」も聞くとよいと言われた。' },
+    { date: day(-1), tag: '実験', text: '予備実験を2回実施。手順の説明に時間がかかりすぎたので、説明文を短くする。' },
+  ].map((l, i) => ({ ...l, id: uid(), createdAt: now - (3 - i) * 1000, reflect: 'demo', reflectedTo: [] }));
+  s.deadlines = [
+    { id: uid(), title: '中間発表のスライド提出', date: day(23), done: false },
+    { id: uid(), title: '倫理審査の申請', date: day(9), done: false },
+    { id: uid(), title: '研究計画書の提出', date: day(-12), done: true },
+  ];
+  s.materials = [{
+    id: uid(), name: '見本資料A_先行研究.pdf', type: 'PDF', size: 0, addedAt: now - 86400000 * 5, status: 'done',
+    text: '(見本)オンライン授業におけるカメラ使用と学生の心理的負担に関する調査。カメラをオフにできる環境では、授業中の不安が低い傾向が見られた。ただし、教員の反応が見えないことによる発言のためらいも報告された。',
+    summary: '', points: [], citation: '', error: '',
+  }];
+  return s;
+}
 
 // ---- 書き出し ----
 function download(blob, filename) {

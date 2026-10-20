@@ -292,3 +292,7 @@ mark.todo { background: var(--mark); color: #6B4E00; }
   .p-sec { break-inside: auto; }
   .p-sec h3 { break-after: avoid; }
 }
+
+.excerpt { white-space: pre-wrap; font-size: 14px; background: var(--ground); border-radius: 10px; padding: 12px 14px; max-height: 280px; overflow: auto; }
+.welcome-actions { margin-top: 14px; align-items: center; }
+.demo-note { background: var(--mark); color: #4A3600; border-radius: 12px; padding: 10px 16px; font-size: 14px; }
